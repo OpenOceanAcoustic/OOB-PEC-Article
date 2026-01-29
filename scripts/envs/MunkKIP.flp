@@ -1,0 +1,13 @@
+/,				! TITLE
+'RA'				! OPT 'X/R' (coords), 'C/A' (couple/adiab)
+9999				! M  (number of modes to include)
+1
+     0.0 100.0 /		! NPROF,  RPROF(1:NPROF) (km)
+500			! NR 接收器水平个数
+0.1 50 /		! RMIN,   RMAX (km) 接收器水平距离范围
+1
+   1000 /		 ! NSD, SD(1:NSD)   (m)
+1
+   51 /		! NRD, RD(1:NRD)   (m)
+1
+     0.0 /			! NRR, RR(1:NRR)   (m)

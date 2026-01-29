@@ -1,0 +1,777 @@
+% ****** Start of file aipsamp.tex ******
+%
+%   This file is part of the AIP files in the AIP distribution for REVTeX 4.
+%   Version 4.1 of REVTeX, October 2009
+%
+%   Copyright (c) 2009 American Institute of Physics.
+%
+%   See the AIP README file for restrictions and more information.
+%
+% TeX'ing this file requires that you have AMS-LaTeX 2.0 installed
+% as well as the rest of the prerequisites for REVTeX 4.1
+% 
+% It also requires running BibTeX. The commands are as follows:
+%
+%  1)  latex  aipsamp
+%  2)  bibtex aipsamp
+%  3)  latex  aipsamp
+%  4)  latex  aipsamp
+%
+% Use this file as a source of example code for your aip document.
+% Use the file aiptemplate.tex as a template for your document.
+\documentclass[%
+ aip,
+% jmp,
+% bmf,
+% sd,
+% rsi,
+ amsmath,amssymb,
+%preprint,%
+ reprint,%
+%author-year,%
+%author-numerical,%
+% Conference Proceedings
+]{revtex4-1}
+
+\usepackage{graphicx}% Include figure files
+\usepackage{dcolumn}% Align table columns on decimal point
+\usepackage{bm}% bold math
+%\usepackage[mathlines]{lineno}% Enable numbering of text and display math
+%\linenumbers\relax % Commence numbering lines
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{newunicodechar}
+\newunicodechar{−}{\ensuremath{-}}
+\newunicodechar{，}{,}
+\usepackage{mathptmx}
+\usepackage{etoolbox}
+\usepackage{subfig}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+
+
+%% Apr 2021: AIP requests that the corresponding 
+%% email to be moved after the affiliations
+\makeatletter
+\def\@email#1#2{%
+ \endgroup
+ \patchcmd{\titleblock@produce}
+  {\frontmatter@RRAPformat}
+  {\frontmatter@RRAPformat{\produce@RRAP{*#1\href{mailto:#2}{#2}}}\frontmatter@RRAPformat}
+  {}{}
+}%
+\makeatother
+
+\begin{document}
+
+\preprint{AIP/123-QED}
+
+\title[Ocean Acoustic Precise Eigenray Tracing via Characteristic and Symbolic Bisection]{%
+  Ocean Acoustic Precise Eigenray Tracing via Characteristic and Symbolic Bisection%
+}
+
+% 作者角标：统一为单位编号¹,²,³ + 通讯作者标识(a)/(b)（无重复“1”）
+\author{Shiwei Xie}
+\author{Peng Qian}
+\author{Yi Liang}
+
+\author{Zhenglin Li}
+\email{lizhlin29@mail.sysu.edu.cn}
+\thanks{Corresponding author: Zhenglin Li, Professor, Doctoral Supervisor. Research Interests: Underwater Acoustic Information Perception and Target Detection Technology.}
+
+\author{Peng Xiao} % 通讯作者
+\email{xiaop36@mail.sysu.edu.cn}
+\thanks{Corresponding author: Xiao Peng, Associate Professor, Doctoral Supervisor. Research Interests: Underwater Acoustic Information Perception and Target Detection Technology.}
+
+
+% 单位：编号¹/²/³对应作者角标
+\affiliation{
+  School of Ocean Engineering and Technology, Sun Yat-sen University \& Southern Marine Science and Engineering Guangdong Laboratory (Zhuhai), Zhuhai 519000, China
+}
+
+\affiliation{
+  Zhuhai Research Center, Hanjiang National Laboratory, Zhuhai 519000, China\\
+}
+
+\affiliation{
+  Guangdong Provincial Key Laboratory of Information Technology for Deep Water Acoustics, Zhuhai 519000, China
+}
+
+\author{YunFeng Liu}
+
+% 单位：编号¹/²/³对应作者角标
+\affiliation{
+  State Key Laboratory of Acoustics and Marine Information, Institute of Acoustics, Chinese Academy of Sciences, Beijing 100190, China
+}
+
+\author{Jiatong Liu}
+\author{Shixiong Luo}
+
+
+% 单位：编号¹/²/³对应作者角标
+\affiliation{
+  School of Ocean Engineering and Technology, Sun Yat-sen University \& Southern Marine Science and Engineering Guangdong Laboratory (Zhuhai), Zhuhai 519000, China
+}
+
+\affiliation{
+  Zhuhai Research Center, Hanjiang National Laboratory, Zhuhai 519000, China\\
+}
+
+\affiliation{
+  Guangdong Provincial Key Laboratory of Information Technology for Deep Water Acoustics, Zhuhai 519000, China
+}
+
+\begin{abstract}
+Ray theory continues to serve as a fundamental framework in ocean acoustic propagation modeling. However, conventional equal-angle eigenray calculation methods exhibit critical limitations, including violations of acoustic reciprocity under near-boundary conditions and inherent trade-offs between accuracy and computational efficiency. This paper presents a refined eigenray calculation method that recasts eigenray determination as a root-solving problem, addressed by a novel two-stage algorithm combining coarse equal-angle tracing with fine tracing based on ray characteristics and symbolic bisection. The proposed method is validated against normal mode solutions in Pekeris and Munk waveguides, yielding a root mean square error (RMSE) for transmission loss (TL) below 1.88 dB, while the conventional equal-angle method exhibits errors exceeding 14.03 dB under near-boundary conditions. Meanwhile, the method preserves reciprocity across the ray trajectories, arrival structure, and transmission loss. With superior efficiency under high precision requirements, the method achieves logarithmic scaling versus linear scaling for the conventional method, offering superior efficiency at high precision requirements. Implemented in the OpenOceanBellhop (OOB) program, this approach provides a robust foundation for ambient noise and reverberation modeling, matched-field processing, and underwater communications.
+\end{abstract}
+
+\maketitle
+
+\section{\label{sec:level1}Introduction}
+Ray theory remains a prevailing framework for ocean acoustic propagation, offering an advantageous balance between intuitive physical significance and high computational efficiency that renders it highly suitable for practical underwater engineering implementations \cite{etter2018}. Unlike full-wave theory \cite{pierce1965}, ray methods treat acoustic energy as propagating along discrete trajectories governed by Fermat's principle, enabling physically interpretable analysis of propagation mechanisms while maintaining scalability for broadband simulations \cite{Jensen2011}. At the core of ray methods, eigenrays serve as fundamental building blocks for sound fields computation \cite{porter2019}, wherein the total field is obtained through coherent summation of individual ray contributions characterized by their amplitudes and phases. Consequently, the completeness and accuracy of eigenray calculation directly determine the fidelity of sound pressure field predictions and arrival patterns, making this process critical for applications such as matched-field processing and underwater communication system design \cite{Hovem2010}.
+
+However, classical ray theory suffers from intrinsic limitations that constrain its reliability\cite{bucker1986}. The theory predicts singularities at caustics where ray tubes collapse to zero cross-section and fails to provide accurate field representations in shadow zones where no direct rays penetrate. Although higher-order asymptotic expansions and complex ray extensions have been developed to address some deficiencies \cite{deschamps1971}, these issues persist in traditional ray tracing methods. In response, beam tracing techniques emerged as a significant improvement, with the seminal work of Červený et al. \cite{cerveny1982} establishing the theoretical foundation for paraxial Gaussian beam tracing through dynamic ray equations derived from the underlying wave equation. Subsequent developments led to practical implementations, including geometric hat beams \cite{Porter1987} and Gaussian ray bundles \cite{Weinberg1996}, which smooth caustic singularities by integrating contributions over a spectrum of wavenumbers. The WKBJ seismogram method \cite{brown1982} and related approaches \cite{wiggins1976} similarly avoid eigenray identification by wavenumber integration. Nevertheless, these methods introduce complexities regarding optimal beam width selection and curvature initialization \cite{Cerveny2001, popov2002}, while the paraxial approximation remains locally valid only near central rays and cannot precisely capture full-wave effects, particularly at low frequencies or in strongly diffractive environments \cite{bucker1986}. The HYPER hybrid approach \cite{tappert1983} attempted to improve accuracy by using parabolic equation solutions for individual beam evolution, though at significant computational cost.
+
+The classical approach for eigenray calculation relies primarily on equal-angle strategies exemplified by the widely adopted Bellhop \cite{porter2010, porter2024acousticstoolbox, yang2025} model and its three-dimensional extension Bellhop3D \cite{babich1981, porter2016, porter2024acousticstoolbox}. These implementations traverse sound rays by dividing the beam at equal angle intervals—a strategy ensuring uniform directional coverage. Although robust for many scenarios, this methodology exhibits significant limitations when sources or receivers are located near the surface or seabed of the sea, generating substantial calculation errors that violate acoustic reciprocity \cite{rayleigh2011}. Figure~\ref{fig:recpty} demonstrates Bellhop's limitations in a Munk waveguide scenario (source frequency: 50 Hz, number of beams: 1000): the blue solid line (source depth: 1000 m, receiver depth: 10 m) exhibits marked divergence from the orange solid line (source depth: 10 m, receiver depth: 1000 m). This discrepancy violates acoustic reciprocity, which dictates identical transmission loss for reciprocal configurations in a horizontally invariant environment. Consequently, the conventional equal-angle ray tracing approach yields non-negligible errors under near-boundary conditions, compromising both numerical accuracy and physical consistency.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{recpty.pdf}
+    \caption{Numerical simulation results of sound fields reciprocity using the traditional equal-angle ray tracing calculation method}
+    \label{fig:recpty}
+\end{figure}
+
+The violation of reciprocity represents a critical deficiency because reciprocity is a fundamental property of linear acoustic systems, provable through the symmetry of Green's function under appropriate boundary conditions \cite{dowling1983, kinsler2000}. Numerical simulations and sea trials consistently demonstrate that exchanging source and receiver positions leaves the sound fields unchanged \cite{liu2019, liu2021}. This principle finds extensive application across underwater acoustics: in ambient sea noise modeling, based on the reciprocity principle and the fact that the number of noise sources significantly exceeds the number of receivers, the positions of the noise sources and receivers were swapped to effectively reduce the calculation time \cite{barclay2013, li2024}; similarly, ocean reverberation calculations benefit substantially by exchanging the positions of numerous seabed scatterers with single receivers based on the reciprocity principle, reducing computational burden in active sonar system design \cite{guo2009}. The inability of traditional methods to preserve reciprocity therefore not only runs counter to practical physical property but also limits their utility in these computationally demanding applications.
+
+This paper presents a refined method for precise eigenray calculation that achieves accurate field prediction while maintaining the computational advantages of ray theory and, crucially, preserving acoustic reciprocity even under challenging near-boundary conditions. The main work and innovation of this paper are illustrated in Fig.~\ref{fig:The main work and innovation}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{The main work and innovation.pdf}
+    \caption{The main work and innovation}
+    \label{fig:The main work and innovation}
+\end{figure}
+
+The structure of this paper is as follows: Part 1 introduces the current research status of ray theory and eigenray calculation method, and presents the limitations of the classical approach. Part 2 analyzes the causes of significant computational errors in classical eigenray calculation methods that violate acoustic reciprocity. Part 3 proposes a method for precise eigenray calculation based on ray-characteristic bisection. This approach enhances the accuracy of sound field calculations under near-boundary conditions while preserving the acoustic reciprocity. Part 4 verifies the usability and practicality of the method proposed in this paper through a large number of numerical simulations from four aspects: calculation accuracy, reciprocity, boundary, and computational complexity analysis. The last part provides a summary.
+
+\section{Statement of the Problem}
+
+To address the issue of significant computational errors in classical eigenray calculation methods that violate acoustic reciprocity, this part first verifies the reciprocity principle of sound fields based on ocean ray theory, followed by an analysis of the sources of errors arising from the conventional equal-angle ray tracing approach.
+
+
+\subsection{\label{sec:level3}Ray Tracing Theory}
+
+In the field of ocean acoustics, ray tracing serves as a fundamental technique for describing the geometric propagation characteristics of sound rays, and its theoretical origin lies in the eikonal equation. Starting from the ray eikonal equation, the following core expressions that govern the propagation of sound rays can be derived \cite{jensen2011computational-XS}:
+\begin{equation}
+\label{eq:ray_r}
+\frac{dr}{ds} = c \xi(s), \quad \frac{d\xi}{ds} = -\frac{1}{c^2} \frac{\partial c}{\partial r},
+\end{equation}
+
+\begin{equation}
+\label{eq:ray_z}
+\frac{dz}{ds} = c \zeta(s), \quad \frac{d\zeta}{ds} = -\frac{1}{c^2} \frac{\partial c}{\partial z},
+\end{equation}
+where $(r, z)$ denotes the spatial coordinates of a point on the sound ray, $s$ is the arc length along the ray, $c = c(\xi, \zeta)$ represents the speed of sound (a function of the ray’s tangent vector components $\xi(s)$ and $\zeta(s)$), and $\xi(s)$, $\zeta(s)$ are the components of the tangent vector. For an acoustic source located at $(0, z_s)$ with an initial emission angle $\alpha$, the initial conditions of the ray equations are defined as:
+
+\begin{equation}
+\label{eq:initial_cond}
+z = z_s, \quad \zeta = \frac{\sin\alpha}{c(0)}, \quad \xi = \frac{\cos\alpha}{c(0)}.
+\end{equation}
+Here, $c(0)$ is the speed of sound at the source position $(0, z_s)$. Fig. \ref{fig:The parameters of the ray equation} illustrates the parameters of the ray equation (including coordinates $(r, z)$, tangent vector $(\xi, \zeta)$, and the acoustic source).
+
+To model the acoustic pressure field, an acoustic beam is constructed around the central ray \cite{jensen2011computational-BM}. The key parameters of this beam include $s$ (arc length of the central ray), $n$ (radial distance from any point in the beam to the central ray), $A(s)$ (pressure amplitude at the central ray position $s$), $\phi$ (beam window function, specifically a Gaussian window), $f$ (acoustic source frequency), and $\tau$ (propagation time of the acoustic wave along the ray). The dynamic ray equation is introduced to simplify the solution process for the amplitude $A(s)$ and the window function $\phi$. The dynamic ray equation \cite{jensen2011computational-QS} accounts  for the second-order variation of the sound speed in the normal direction of the ray, which is critical to describe the spreading and focusing of the beam. 
+
+\begin{equation}
+\label{eq:dyne}
+\frac{\mathrm{d}q}{\mathrm{d}s}=cp(s),\quad\frac{\mathrm{d}p}{\mathrm{d}s}=-\frac{c_{nn}}{c^2(s)}q(s),
+\end{equation}
+where  \( q(s) \) and \( p(s) \) are parameters describing the divergence/convergence of the ray beam. The second-order derivative of the sound speed along the normal direction of the ray, denoted as $c_{nn}$, is expressed using the partial derivatives of $c$ with respect to the Cartesian coordinates $(r, z)$:
+
+\begin{equation}
+\label{eq:c_nn}
+c_{nn} = c^2 \left( \frac{\partial^2 c}{\partial r^2} \zeta^2 - 2 \frac{\partial^2 c}{\partial r \partial z} \zeta \xi + \frac{\partial^2 c}{\partial z^2} \xi^2 \right).
+\end{equation}
+
+From the acoustic intensity equation, the pressure amplitude $A(s)$ at the central ray (under the Gaussian ray beam assumption) is derived as follows:
+
+\begin{equation}
+\label{eq:amplitude_A}
+A(s) = \frac{1}{\sqrt{2\pi}} \sqrt{\frac{\cos\alpha}{r} \cdot \frac{c(s)}{q(s)}}.
+\end{equation}
+
+The reciprocity of sound fields will be demonstrated via the ray method: when the positions of the source and receiver are exchanged in a given environment, the received field remains unchanged. It holds that the eigenray connecting the source and receiver retains its identity as an eigenray, irrespective of which end corresponds to the source or receiver. To validate reciprocity, therefore, only the independence of the ray amplitude from the direction of integration along the ray needs to be verified. For notational convenience, consider the source and receiver to lie at arclengths $s_1$ and $s_2$, respectively. For Eq.~(\ref{eq:dyne}), it can be written in a second order form as \cite{jensen2011computational-REP}
+
+\begin{equation}
+\label{eq:second order form}
+\mathcal{L}q=\left(\frac{q^{\prime}}{c}\right)^{\prime}+\frac{c_{nn}}{c^{2}\left(s\right)}q\left(s\right)=0,
+\end{equation}
+where \(\mathcal{L}\) is defined as the second-order linear differential operator corresponding to the above equation.
+
+\begin{equation}
+\label{eq:q1}
+q\left(s_{1}\right)=0,
+\end{equation}
+
+\begin{equation}
+\label{eq:q2}
+q^{\prime}\left(s_{1}\right)=\frac{1}{c\left(s_{1}\right)}.
+\end{equation}
+
+Given any two linearly independent solutions of the differential equation $q\left(s_{1}\right)$ and $q\left(s_{2}\right)$, we seek to satisfy the initial conditions as a linear combination $q\left(s\right)=Aq\left(s_{1}\right)+Bq\left(s_{2}\right)$. Solving for the unknown coefficients one finds
+
+\begin{equation}
+\label{eq:qs}
+q(s)=\frac{q_1(s_1)q_2(s)-q_2(s_1)q_1(s)}{W(s_1)/c(s_1)},
+\end{equation}
+where $W_{sk}(s)$ is the Wronskian of the two independent solutions,
+
+\begin{equation}
+\label{eq:Ws}
+W_{sk}(s)=q_1(s)q_2^{\prime}(s)-q_2(s)q_1^{\prime}(s).
+\end{equation}
+
+One may verify by inspection that $q\left(s\right)$ so constructed satisfies the initial conditions. It is now noted that $W_{sk}(s)/c(s)$ is a constant (i.e., its derivative is zero). This can be verified by differentiating the above equation directly.
+
+\begin{equation}
+\label{eq:Wscs}
+\begin{aligned}
+\left(\frac{W_{sk}(s)}{c(s)}\right)^{\prime} & =\left(\frac{q_1q_2^\prime-q_2q_1^\prime}{c}\right)^\prime \\
+ & =q_1\left(\frac{q_2^\prime}{c}\right)^\prime-q_2\left(\frac{q_1^\prime}{c}\right)^\prime \\
+ & =q_1\mathcal{L}q_2-q_2\mathcal{L}q_1 \\
+ & =0.
+\end{aligned}
+\end{equation}
+
+Thus, a pivotal symmetric result emerges upon exchanging the source and receiver: $q(s_{2};s_{1})=q(s_{1};s_{2})$. In other words, the spreading function $q$ at $s_2$ (generated by a source at $s_1$) equals the field at $s_1$ (generated by a source at $s_2$). This symmetry of the spreading function corresponds to the desired reciprocity property.
+
+\subsection{\label{sec:level3}Traditional Equal-Angle Ray Tracing Method}
+
+
+
+Traditional eigenray calculations mostly rely on classical ray tracing programs such as Bellhop. Bellhop is suitable for 2D ray tracing and can handle ocean waveguide environments with horizontal or varying boundaries. As shown in the previous study section of the Fig.~ \ref{fig:The main work and innovation} , its core principle involves traversing sound rays by dividing the beam at equal angles: given a total beam opening angle $\Theta$ (covering the possible range of sound ray emission angles). It is uniformly divided into number of beams ($N_b$), with the angle interval between adjacent rays given by  
+\begin{equation}
+\label{eq:helmholtz_f}
+d\alpha = \frac{\Theta}{N_b}.
+\end{equation}
+
+In Bellhop, the recommended angle interval $d\alpha$ is correlated with both the frequency $f$ and the maximum reception range $R_{max}$, sound speed $c$, and it can be calculated using the formula:
+\begin{equation}
+\label{eq:dalpa_opt}
+d\alpha_{rcm} = \frac{\pi c}{0.3 f R_{max}}.
+\end{equation}
+
+By tracking the propagation path of each sound ray, the method then determines whether the ray contributes to the sound pressure at the receiving point by comparing two key parameters: the perpendicular distance from the receiver to the ray ($d$) and the beam radius ($\rho$). 
+
+The geometric beam function is defined as:
+\begin{equation}
+\label{eq:beam_width}
+\phi(s,d) =
+\begin{cases}
+\dfrac{\rho(s)-d}{\rho(s)} & \text{if } d \leq \rho(s) \\
+0 & \text{otherwise}
+\end{cases}.
+\end{equation}
+Here, the beam radius of the geometric beam satisfies the following relation:
+\begin{equation}
+\label{eq:rho}
+\rho(s) = |q(s) d\alpha|,
+\end{equation}  
+where \( q(s) \) is the expansion term derived from the dynamic ray equations.
+
+Fig. \ref{fig:The structure of the beam pressure field} shows the structure of the beam pressure field (including the central ray, radial distance $d$, and window function $\phi$). In the traditional equal-angle ray method, a ray is considered an eigenray if it satisfies the condition given in Eq.~(\ref{eq:beam_width}):
+\begin{equation}
+\label{eq:eigenray_condition}
+d \leq \rho.
+\end{equation}  
+
+
+The acoustic pressure contribution of each eigenray to the receiver is calculated independently.
+
+\begin{equation}
+\label{eq:pressurecal}
+U^{(\alpha)}(s,n)=A(s)\phi(s,d)e^{i\omega\tau(s)+\varphi(s)}.
+\end{equation}
+Here, $\varphi(s)$ represents the phase shift caused by interface reflection.
+
+The total acoustic pressure at the receiver position is then obtained by summing these individual contributions.
+
+\begin{equation}
+\label{eq:u_sum}
+U=\sum_{\alpha} U^{(\alpha)}.
+\end{equation}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{The parameters of the ray equation.pdf}
+    \caption{The parameters of the ray equation}
+    \label{fig:The parameters of the ray equation}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{bpf2.pdf}
+    \caption{The structure of the beam pressure field}
+    \label{fig:The structure of the beam pressure field}
+\end{figure}
+However, this method has obvious limitations. When the angle interval \(d\alpha\) of rays is relatively large and the receiver is close to the boundary, the rays propagating near the boundary tend to be difficult to achieve convergence. Here, "convergence" specifically refers to the condition where the sum of amplitudes of rays with identical characteristics (numbers of top and bottom reflections) is not equal to 1. The following section will elaborate on this scenario and present the complete derivation of sound pressure calculation.  
+
+
+As illustrated in Fig.~\ref{fig:The structure of the beam pressure field} (a), the dilemma of the conventional equal-angle ray method when the receiver is close to the boundary is presented: The angle interval between adjacent rays is excessively large, resulting in the receiver not being covered by a ray cluster with consistent characteristics. Ray characteristics are defined by their top and bottom reflection counts. Specifically, the red ray (labeled 1) reaches the receiver without interacting with any boundaries, and is thus categorized as a direct ray; in contrast, the green ray (labeled 4) strikes the sea surface boundary prior to arriving at the receiver, and is classified as a sea-surface reflected ray. The sound pressure at the receiver can be calculated as the sum of the contributions from these two rays according to Eq.(\ref{eq:pressurecal}-\ref{eq:u_sum})
+\begin{equation}
+\label{eq:u_sum14}
+U=A_{1}\phi _{1}e^{i\left( \omega \tau _{1}+\varphi _{1}\right) }+A_{4}\phi _{4}e^{i\left( \omega \tau _{4}+\varphi _{4}\right) },
+\end{equation}
+where \(A_{1}\), \(\phi_{1}\), \(\tau_{1}\), and \(\varphi_{1}\) denote the amplitude, window value, time delay, and phase of Ray 1, respectively; \(A_{4}\), \(\phi_{4}\), \(\tau_{4}\), and \(\varphi_{4}\) represent the corresponding parameters of Ray 4. Given the non-zero perpendicular distance \(d\), both \(\phi_{1}\) and \(\phi_{4}\) are less than 1, which leads to the underestimation of the contributions from the direct ray and the sea-surface reflected ray.
+ 
+
+As shown in Fig.~\ref{fig:The structure of the beam pressure field} (b), an additional ray (labeled 3) is inserted between Rays 1 and 4. With identical acoustic characteristics, Rays 3 and 4 constitute a sea-surface reflected ray cluster that fully covers the receiver. The sound pressure at the receiver is then expressed as:  
+\begin{equation}
+\label{eq:u_sum134}
+U=A_{1}\phi _{1}e^{i(\omega \tau _{1}+\varphi _{1})}+A_{3}\phi _{3}e^{i(\omega \tau _{3}+\varphi _{3})}+A_{4}\phi _{4}e^{i(\omega \tau _{4}+\varphi _{4})}.
+\end{equation}
+
+For rays with identical characteristic, their amplitudes, phases, and time delays are approximately equal (i.e., \(A_{3} \approx A_{4}\), \(\varphi_{3} \approx \varphi_{4}\), \(\tau_{3} \approx \tau_{4}\)). On the other hand, rays with different characteristics exhibit discrepancies in amplitudes and phases primarily owing to boundary collisions, which means they are not eligible for combination. 
+
+Combining like terms in the equation above yields:  
+\begin{equation}
+\label{eq:u_sum134_2}
+U=A_{1}\phi _{1}e^{i(\omega \tau _{1}+\varphi _{1})}+A_{3}(\phi _{3}+\phi _{4})e^{i(\omega \tau _{3}+\varphi _{3})}.
+\end{equation}
+
+From the beam window calculation in Eq.(\ref{eq:beam_width}), \(\phi_{3} + \phi_{4} \approx 1\). Substituting this into the equation simplifies it to:  
+\begin{equation}
+\label{eq:u_sum134_3}
+U=A_{1}\phi_{1}e^{i\left( \omega \tau_{1}+\varphi_{1}\right) }+A_{3}e^{i\left( \omega \tau _{3}+\varphi_{3}\right)}.
+\end{equation}
+
+Compared to the scenario in Fig.~\ref{fig:The structure of the beam pressure field} (a), the contribution of the sea-surface reflected ray is now fully compensated, while the direct ray’s contribution remains partially missing (since \(\phi_{1} < 1\)).  
+
+In Fig.~\ref{fig:The structure of the beam pressure field} (c), two additional rays are inserted between Rays 1 and 4. Rays 2 and 1 exhibit identical acoustic characteristics. They form a direct ray cluster and fully enclose the receiver together. Employing the same derivation logic Eq.(\ref{eq:u_sum134}- \ref{eq:u_sum134_3}), the sound pressure contribution at the receiver is written as:  
+\begin{equation}
+\label{eq:u_sum1234_2}
+\begin{aligned}
+U &= A_{1}(\phi _{1}+\phi _{2})e^{i(\omega \tau _{1}+\varphi _{1})}+A_{3}(\phi _{3}+\phi _{4})e^{i(\omega \tau _{3}+\varphi _{3})} \\
+  &= A_{1}e^{i(\omega \tau _{1}+\varphi _{1})}+A_{3}e^{i(\omega \tau _{3}+\varphi _{3})}.
+\end{aligned}
+\end{equation}
+At this stage, the contributions from direct rays and sea-surface reflected rays are fully included in the computation.
+
+It is worth noting that Eq.~(\ref{eq:u_sum1234_2}) is in full agreement with the case illustrated in Fig.~\ref{fig:The structure of the beam pressure field} (d), namely that rays traverse the receiver exactly. That is to say, if accurate calculation of eigen-rays is achieved, the summation of their amplitudes, phases and time delays alone suffices, with the window function being dispensable; in the meantime, the count of rays participating in the contribution calculation will decrease accordingly.
+
+Overall, for the equal-angle ray tracing approach, the choice of angle interval $d\alpha$ requires a trade-off between computational precision and efficiency: an unduly coarse interval may cause ray missing, whereas an overly fine interval will give rise to a substantial growth in computational cost. As illustrated in Fig.~\ref{fig:recpty}, insufficient number of beams (excessively coarse angle interval) degrades the accuracy of the sound field interpolation at receiver positions under near-boundary conditions, thereby violating the acoustic reciprocity principle. Therefore, it is imperative to propose a precise eigen-ray calculation method that can enhance both computational efficiency and precision in parallel.
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.75\linewidth]{accer.pdf}
+    \caption{Schematic Diagram of the Influence of Sound Ray Density on Equal-Angle Ray Tracing}
+    \label{fig:accer}
+\end{figure*}
+
+
+\section{Solution Approach}
+
+From the above analysis, it can be concluded that eigenrays are a core component for calculating sound pressure distributions in sound fields analysis. However, the traditional equal-angle ray method relies on an exhaustive search strategy to determine the initial emission angles of eigenrays — a process often constrained by insufficient computational accuracy and slow operational speed. Notably, the key to addressing these issues lies in the high-precision solution of eigenrays.
+
+\subsection{\label{sec:level3}Theoretical Foundation of Precise Eigenray Calculation}
+
+The key issue that needs to be addressed is the search for eigenrays capable of linking the source to the receiver. The solution of eigenrays can be reduced to the determination of their initial emission angles, since the ray trajectories are fully defined once the initial angles are fixed. With respect to the Cartesian coordinate system, the trajectory equation for any given ray satisfies
+
+\begin{equation}
+\label{eq:eigenray_track_3d}
+f(\Omega, x, y, z) = 0,
+\end{equation}
+where $\Omega$ is the spatial angle, which can be defined by the elevation angle and the azimuth angle, $\Omega = (\alpha, \beta)$. 
+
+For 2D ray tracing (2D means fixing the azimuth angle and assuming that the sound ray propagates only in the plane where this azimuth angle lies), converted to the cylindrical coordinate system, the ray trajectory equation satisfies
+\begin{equation}
+\label{eq:eigenray_track_2d}
+f(\alpha, r, z) = 0.
+\end{equation}
+
+Assume that the receiver coordinates are $(r_{r}, z_{r})$. At a distance $r_{0}$, the ray trajectory $Z$ is a univariate function of $\alpha$
+\begin{equation}
+\label{eq:eigenray_track_z}
+z = Z\left(\alpha, r_{r}\right).
+\end{equation}
+
+The root of the eigenray is defined as the exit angle $\alpha$, and the root-finding equation can be defined as \cite{jensen2011computational-FE}
+\begin{equation}
+\label{eq:eigenray_root1}
+F(\alpha) = Z\left(\alpha, r_{r}\right) - z_{r} = 0,
+\end{equation}
+that is, solving for the zero point of $F(\alpha)$.
+
+
+\subsection{\label{sec:level3}Numerical Calculation Method for Precise Eigenray}
+
+Numerical calculations involve specific computer programs and algorithms. Therefore, the simplest free-field space is taken as the starting point, with a gradual extension to the deep-sea Munk profile environment. Potential problems in the numerical calculation process are analyzed in a step-by-step manner, and the algorithm is continuously refined and optimized.
+
+First, let us consider a free-field example. Assume that the sound source is located at the origin $(r_{s}, z_{s})=(0,0)$, the receiver is at $(r_{r}, z_{r})=(100\ \text{m}, 100\ \text{m})$, and the environment features a constant sound speed of 1500 m/s. For free space, the following equations hold:
+
+\begin{equation}
+\label{eq:Z_free}
+Z(\alpha)=z_{s}+r_{r} \cdot \tan (\alpha).
+\end{equation}
+\begin{equation}
+\label{eq:Fa_free}
+F(\alpha)=z_{s}+r_{r} \cdot \tan (\alpha)-z_{r}=0.
+\end{equation}
+
+As shown in Fig.~\ref{fig:Free-field}, under free-space conditions, $F(\alpha)$ exhibits a positive correlation with $\alpha$. The target function values corresponding to the initial angles of 40° and 50° have opposite signs. The bisection method can be applied within the range of 40°to 50° to solve quickly and accurately for $\alpha$.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Ray trajectory]{\includegraphics[width=0.45\linewidth]{R-Z-Alpha.pdf}}
+\subfloat[Target function]{\includegraphics[width=0.432\linewidth]{F-Alpha.pdf}}
+\caption{Free-field space (a) Ray trajectory (b) Target function.}
+\label{fig:Free-field}
+\end{figure*}
+
+To further investigate this scenario, a boundary is established at 200 m, where incident sound rays undergo specular reflection, and the applicable angle range is extended to 30°–80°. The ray trajectories and target function under the sea surface Lloyd's mirror condition are illustrated in Fig.~\ref{fig:Lloyd}.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Ray trajectory]{\includegraphics[width=0.47\linewidth]{R-Z-Alpha-Bc200m.pdf}}~
+\subfloat[Target function]{\includegraphics[width=0.434\linewidth]{F-Alpha-Bc200m.pdf}}
+\caption{Sea surface Lloyd's mirror scenario (a) Ray trajectory (b) Target function.}
+\label{fig:Lloyd}
+\end{figure*}
+
+It can be observed that the presence of reflection from sea surface results in an additional solution for the eigenray. The addition of another boundary at -200 m is anticipated to lead to more solutions, as shown in Fig.~\ref{fig:Rectangular}.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Ray trajectory]{\includegraphics[width=0.47\linewidth]{R-Z-Alpha-Bc200m-Bc-200m.pdf}}~
+\subfloat[Target function]{\includegraphics[width=0.432\linewidth]{F-Alpha-Bc200m-Bc-200m.pdf}}
+\caption{Rectangular waveguide space (a) Ray trajectory (b) Target function.}
+\label{fig:Rectangular}
+\end{figure*}
+
+Due to the presence of multiple solutions, solving the equation begins with identifying solution intervals before implementing the bisection method. The conventional equal-angle division method is still adopted for interval searching: for example, 1201 sound rays are distributed over $-60^{\circ}$ to $60^{\circ}$ with an angle interval $d\alpha=0.1^{\circ}$. Intervals $[\alpha_{l}, \alpha_{u}]$ satisfying $F(\alpha_{l}) \cdot F(\alpha_{u}) \leq 0$ are guaranteed to contain solutions. This condition can be referred to as the sign-difference criterion.
+
+In a 5000 m deep-sea Munk sound speed gradient environment, with the sound source at a depth of 1000 m, the receiver at 500 m, and a reception range of 10 km, the variations of $F(\alpha)$ and $|F(\alpha)|$ with $\alpha$ are shown in the Fig.~\ref{fig:MunkTandE}. It can be seen that due to the sound speed gradient, a peak near 0° becomes smoothed. Notably, influenced by the gradient, the solution at -15° is likely to be omitted if the angle interval is not fine enough (the peak is extremely sharp and disappears when the angle interval is slightly increased). Therefore, the initial equal-angle division should also be sufficiently refined.
+
+As shown in the Fig.~\ref{fig:MunkTandE} (b), solutions to $F(\alpha)=0$ are always concentrated around the minima of $|F(\alpha)|$. When $\alpha$ approaches ±90°, the sawtooth shape becomes increasingly sharp and steep.
+
+It should be noted that in numerical calculations, $F(\alpha)$ can only be computed at discrete, finite $\alpha$ values, making the sign-difference criterion sufficient but not necessary. As shown in Fig.~\ref{fig:2solution}, inadequate initial angle discretization may result in $F(\alpha_{l}) \cdot F(\alpha_{u})>0$ even with an existing solution inside the interval, thus causing root omission.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{2solution.pdf}
+    \caption{Case where adjacent sound rays have the same sign but a solution exists (the symbols “+” and “–” in the figure denote the sign of $F(\alpha)$; specifically, “+” indicates that the receiver lies below the eigenray, while “–” indicates that the receiver lies above the eigenray).}
+    \label{fig:2solution}
+\end{figure}
+
+To reduce root omission, $|F(\alpha)|$ is defined as the error function:
+
+\begin{equation}
+\label{eq:arg}
+arg _{\alpha} \min |F(\alpha)|.
+\end{equation}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{union.pdf}
+    \caption{The Schematic of search intervals for the bisection method}
+    \label{fig:union}
+\end{figure}
+
+Directly judging the sign of $F(\alpha)$ easily leads to missed solutions if the angle interval is not fine enough. A method of refined search around the minima of $|F(\alpha)|$ can significantly reduce this probability. Thus, as illustrated in Fig.~\ref{fig:union}, the search intervals for the bisection method should be the union of the following two conditions:
+
+\begin{itemize}
+    \item Intervals satisfying $F(\alpha_{l}) \cdot F(\alpha_{u}) \leq 0$.
+    \item Intervals within ±1 neighbor of the minima of $|F(\alpha)|$.
+\end{itemize}
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Target function curve]{\includegraphics[width=0.45\linewidth]{Munk_FalphaRr=10km.pdf}}~~
+\subfloat[Error function curve]{\includegraphics[width=0.45\linewidth]{Munk_abs_FalphaRr=10km.pdf}}
+\caption{5000 m deep-sea Munk sound speed gradient environment (a) Target function curve (b) Error function curve.}
+\label{fig:MunkTandE}
+\end{figure*}
+
+For the second condition, $F(\alpha)$ may maintain the same sign within the intervals within ±1 neighbor around its minimum, even if two solutions exist in this range. As shown in Fig.~\ref{fig:MunkTandE}, the number of top and bottom boundary reflections can be combined into a characteristic array $(N_{\text{tr}}, N_{\text{br}})$. Within $0^\circ$–$90^\circ$ or $-90^\circ$–$0^\circ$, the array evolves as $(0,0) \to (0,1) \to (1,1) \to (1,2) \dots$ or $(0,0) \to (1,0) \to (1,1) \to (2,1) \dots$, respectively, with at least one solution to $F(\alpha)=0$ per evolution. Thus, the bisection method can be adapted using the boundary hit counts of the sound ray—a method called ray-characteristic bisection, where "characteristics" refer to the top and bottom hit numbers of the sound ray.
+
+As shown in Fig.~\ref{fig:charbin}, bisection is performed when the target function has the same sign. The solid red and green lines represent the upper and lower boundaries of the bisection, and the dashed green line represents the midpoint of the bisection. Fig.~\ref{fig:charbin} (a) shows the case where the sign of the target function at the midpoint is consistent with that of the upper and lower boundaries. In this case, if the characteristic of the midpoint is the same as that of the upper boundary, the upper boundary is replaced with the midpoint; otherwise, the lower boundary is replaced.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Case where the midpoint target function has the same sign as the boundaries]{\includegraphics[width=0.40\linewidth]{charbin1.pdf}}~~
+\subfloat[Case where the midpoint target function has a different sign from the boundaries]{\includegraphics[width=0.40\linewidth]{charbin2.pdf}}
+\caption{Ray characteristic bisection method (a) Case where the midpoint target function has the same sign as the boundaries (b) Case where the midpoint target function has a different sign from the boundaries.}
+\label{fig:charbin}
+\end{figure*}
+
+As shown in Fig.~\ref{fig:charbin} (b), when the ray-characteristic bisection results in a midpoint where the target function $F(\alpha)$ sign differs from the upper and lower boundaries, each interval formed by the midpoint and the upper/lower boundaries contains one solution. Applying sign-based bisection (hereinafter referred to as sign bisection)—a method that iteratively narrows the solution interval by replacing the boundary with the same function value sign as the midpoint using the midpoint's corresponding angle—between the midpoint and the upper boundary, as well as between the midpoint and the lower boundary, enables the determination of the two solutions.
+
+In summary, the algorithm for precisely calculating eigenrays consists of two core steps:
+\begin{enumerate}
+    \item \textbf{Coarse Tracing (Equal-beam Method)}    
+    
+    First, perform ray tracing at traditional equal angle intervals  and solve for the difference $F(\alpha)$ between the depth of the ray at the receiving range and the actual receiving depth. The union of the intervals within ±1 neighbor of the minima of $|F(\alpha)|$ and the adjacent indices corresponding to sign changes of $F(\alpha)$ is defined as the upper and lower bounds for fine tracking. Namely, the interval sets of upper and lower boundaries are defined as (sign change point -1, sign change point) and (minimum point -1, minimum point +1).
+    
+    \item \textbf{Fine Tracing (Bisection Method)}
+    \begin{enumerate}  % 二级有序列表：(a)(b)(c) 样式
+        \item If the signs of $F(\alpha)$ corresponding to the upper and lower boundary rays are opposite, \textbf{symbolic bisection} shall be adopted for iteration, \textbf{regardless of} whether the characteristics of the two types of rays are consistent. The core operation of \textbf{symbolic bisection} is to replace rays with consistent signs: if the sign of $F(\alpha)$ for the midpoint ray is the same as that for the upper boundary ray, replace the upper boundary with this midpoint; otherwise, replace the lower boundary.
+
+        
+        \item If the signs of $F(\alpha)$ for the upper and lower boundary rays are the same \textbf{and} their ray characteristics are identical, the interval is deemed to contain no solutions.
+        
+        \item If the signs of $F(\alpha)$ for upper and lower boundary rays are identical \textbf{but} their characteristics differ, the interval has two solutions and \textbf{characteristic bisection} is required. Substitute the upper boundary with the midpoint if the midpoint ray's characteristic matches the upper one; otherwise, substitute the lower boundary. Repeat until a midpoint angle with an $F(\alpha)$ sign distinct from both boundaries is found. Then apply \textbf{symbolic bisection} separately to the midpoint-upper and midpoint-lower subintervals—Step (a).
+    \end{enumerate}
+\end{enumerate}
+
+It can be seen from the above algorithm that symbolic bisection has a higher priority than characteristic bisection. However, if boundary rays with opposite signs cannot be found, characteristic bisection can be used to locate a midpoint ray with a sign different from those of the two boundaries. The combination of these two bisection methods reduces the risk of root loss and improves the efficiency of the algorithm.
+
+To ensure that the eigenrays identified by the program are as accurate as possible, three termination criteria are specified for the symbolic bisection method, all of which must be satisfied simultaneously:
+
+\begin{enumerate}  % 二级有序列表：(a)(b)(c) 样式
+    \item The difference between the upper and lower angles of the search interval is less than the error tolerance $\alpha_{\text{tol}}$.
+
+    \item The rays corresponding to the upper and lower angles share identical characteristics, i.e., the same number of surface and bottom reflections.
+
+    \item The rays corresponding to the upper and lower angles are located, respectively, above and below the receiver, which means the values of $F(\alpha)$ for these two angles have opposite signs.
+\end{enumerate}
+
+Since the convergence criterion depends not only on the accuracy of the search interval, but also on the signs and characteristics of the rays, it is designated as the \textbf{dynamic termination criterion} for the precise calculation eigenray method. 
+
+If all the above three criteria are satisfied, the mean value of the upper and lower boundary angles is taken as the initial emission angle of the eigenray. If the three criteria are still not fully met after 20 iteration cycles, the interval shall be determined to have no valid solution.
+
+Based on the Bellhop framework, a new C++ program entitled \textbf{OpenOceanBellhop (OOB)} has been developed; the Windows executable (EXE) file can be downloaded from the following link: \href{https://gitee.com/open-ocean/OpenOceanBellhop}{https://gitee.com/open-ocean/OpenOceanBellhop}.
+
+
+\section{NUMERICAL CALCULATION AND ANALYSIS}
+
+This section will provide a comprehensive evaluation of the method proposed in this paper. The following aspects are mainly considered: calculation accuracy, reciprocity, boundary, and computational complexity. When conducting numerical simulations of underwater acoustic models, selecting scenarios with simple structures, clear physical properties, and easy verification is critical. Two commonly used standard scenarios, the Pekeris waveguide and Munk waveguide, are introduced below, along with their core advantages as typical scenarios.
+
+The Pekeris waveguide \cite{pekeris1948} is a shallow-sea waveguide model composed of a uniform fluid layer (seawater) overlying a uniform fluid half-space seabed. It adopts idealized uniform medium assumptions for both the seawater layer and seabed, with fixed acoustic parameters (e.g., sound speed, density, attenuation), and the sound source is typically placed within the water column. To facilitate a clearer understanding of the Pekeris waveguide environment, we introduce a schematic diagram of its typical parameters of the ocean environment as shown in Fig.~\ref{fig:pekeris env}. In this model, sound speed $ c_w = 1500 \, \text{m/s} $, and density $ \rho_w = 1000 \, \text{kg/m}^3 $. The seabed is a uniform fluid half-space with depth $ D = 200 \, \text{m} $, sound speed $ c_b = 1600 \, \text{m/s} $, density $ \rho_b = 1500 \, \text{kg/m}^3 $ and attenuation $ \alpha_b = 0.2 \, \text{dB/}\lambda $. The depth of the sound source $z_s=25 \, \text{m} $. This set of idealized uniform parameters conforms to the core assumptions of the Pekeris waveguide, providing a standardized basis for model comparison.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{PekerisStandardScenarios.pdf}
+    \caption{Pekeris waveguide environment}
+    \label{fig:pekeris env}
+\end{figure}
+
+The Munk waveguide \cite{munk1974} is a deep-sea waveguide model characterized by a depth-dependent sound speed profile in the seawater layer, overlying a uniform fluid or elastic half-space seabed. It abandons the idealized uniform sound speed assumption of shallow-sea models, adopting a canonical "Munk profile" for the water column. The formula for calculating the speed of sound in the munk profile is as follows:
+
+\begin{equation}
+\label{eq:munk profile}
+c_w(z)=1500.0\left[1.0+\epsilon\left(\tilde{z}-1+\mathrm{e}^{-\tilde{z}}\right)\right].
+\end{equation}
+
+Among them, $\epsilon = 0.00737$, the scaling depth is given by $\tilde{z}={2(z-1300)/1300}$, and $z$ is the depth (unit: meters). The density of the water \(\rho_w = 1000 \, \text{kg/m}^3\). The seabed (half-space of uniform fluid with depth $ D = 5000 \, \text{m} $) has a sound speed \(c_b = 1600 \, \text{m/s}\), density \(\rho_b = 1800 \, \text{kg/m}^3\) and attenuation \(\alpha_b = 0.2 \, \text{dB/}\lambda\). The depth of the sound source $z_s=1000 \, \text{m} $. This set of parameters adheres to the core definition of the Munk waveguide, offering a standardized configuration for acoustic propagation simulation and cross-model validation. The other specific environmental parameters and acoustic configurations are provided in Tab.~\ref{table:BM Cases}.
+
+Based on the derivation from Eq.~\ref{eq:dalpa_opt}, for the Pekeris environment, $\alpha_{\text{rcm}}$ is determined to be $0.3^\circ$, and the recommended number of beams over the full angle range ($-90^\circ$ to $90^\circ$) is 600. For the Munk environment, $\alpha_{\text{rcm}}$ is $0.36^\circ$, with a corresponding recommended number of beams of 500 over the same full angle range. Thus, without loss of generality, subsequent simulations employ a default number of beams of 1000.
+
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Munkstd3.pdf}
+    \caption{Munk waveguide environment}
+    \label{fig:munk env}
+\end{figure}
+
+\begin{table*}[!t]
+\centering
+\caption{\label{table:BM Cases}Specific Environmental and Acoustic Parameters}
+\begin{ruledtabular}
+\begin{tabular}{lcccc}
+Environment & Source Frequency (Hz) & Source Depth (m) & Receiver Depth (m) & Receiver Range (km)\\
+\hline
+Pekeris & 100 & 25 & 1 & 0.1—30\\
+Munk & 50 & 1000 & 10 & 0.1—50\\
+\end{tabular}
+\end{ruledtabular}
+\end{table*}
+
+
+\subsection{\label{sec:level2}Calculation Accuracy Analysis}
+
+The normal mode method is employed as the standard solution to validate the accuracy of the sound fields calculations obtained using the precise eigenray calculation method. Specifically, the normal mode model adopts the Kraken \cite{porter2024acousticstoolbox} program for calculations, while the equal-angle eigenray calculation method utilizes the Bellhop program. For the precise eigenray calculations, OOB program was employed. 
+
+To reduce the impact of sound fields interference, the amplitude of the sound pressure within the 1 km range was averaged to obtain the transmission loss (TL). The calculation formula is as follows:
+\begin{equation}
+\label{eq:f_PTheta}
+TL=10 \lg \frac{1}{N} \sum_{i \in Area} I_{i},
+\end{equation}
+where $I = \frac{p_a^2}{\rho c}$ denotes the time-averaged acoustic intensity at this position, with $p_a$ being the acoustic pressure amplitude, and $\rho$ and $c$ the density and sound speed of the medium, respectively. $Area$ denotes the ±0.5 km range of the receiver distance, and $N$ is the number of sound pressure samples involved in the averaging within the 1 km range. The root mean square error (RMSE) is used to quantify the TL error between different methods. The RMSE calculation formula for TL error is given in Eq.~(\ref{eq:tl_rmse1}):
+\begin{equation}
+\label{eq:tl_rmse1}
+RMSE = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \left( TL_{\text{1},i} - TL_{\text{2},i} \right)^2}
+\end{equation}
+where $N$ denotes the total number of sampling points for receiver distance; $TL_{\text{1},i}$ and $TL_{\text{2},i}$ represents the TL value obtained by method 1 and 2, respectively, at the $i$-th receiver.
+
+In the Pekeris scenario, the source depth is set to 25 m and the receiver depth to 1 m. The transmission loss over reception distances ranging from 0 to 30 km is illustrated in Fig.~\ref{fig:krakenBMtest}(a). As shown in the figure, the transmission loss computed by OOB is in close agreement with the results obtained from kraken, whereas the transmission loss calculated via Bellhop exhibits a notable discrepancy compared to the other two approaches. In the Munk scenario, the source depth is 1000 m and the receiver depth is 10 m, with transmission loss over a range of 0–50 km presented in Fig.~\ref{fig:krakenBMtest}(b). The figure demonstrates that the transmission loss derived from OOB is highly consistent with the standard solution generated by Kraken, while the result from Bellhop again deviates significantly from the other two methods. The RMSE of the transmission loss between OOB and Kraken, as well as between Bellhop and Kraken, are presented in Fig.~\ref{fig:krakenBMtest}. The former remains below 1.88 dB in both the Pekeris and Munk scenarios, whereas the latter exceeds 5.3 dB and reaches up to 14.03 dB. The above findings verify the accuracy of the precise eigenray calculations method for sound field calculations under near-boundary conditions.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Pekeris environment: TL and RMSE of OOB/Bellhop vs. Kraken]{\includegraphics[width=0.45\linewidth]{Calculation_Accuracy_TL_Pekeris.pdf}}~
+\subfloat[Munk environment: TL and RMSE of OOB/Bellhop vs. Kraken]{\includegraphics[width=0.45\linewidth]{Calculation_Accuracy_TL_Munk.pdf}}\\ % 第一行换行
+\caption{Calculation Accuracy Analysis: Transmission Loss Comparison of OOB (Precise Eigenray Calculations), Bellhop (Equal-angle Eigenray Calculations) and Kraken (Standard Solution).}
+\label{fig:krakenBMtest}
+\end{figure*}
+
+
+\subsection{\label{sec:level2}Reciprocity Analysis}
+
+Ray tracing methods for sound fields calculation (equal-angle eigenray calculations: Bellhop program; precise eigenray calculations: OOB program) must satisfy the reciprocity principle at three distinct levels:
+\begin{enumerate}
+    \item The propagation paths of sound rays are reversible at corresponding locations.
+    \item The arrival structures of sound rays are identical at corresponding locations.
+    \item The received sound TL values are equal at corresponding locations.
+\end{enumerate}
+
+Next, the reciprocity of the ray sound fields will be calculated through two cases, covering Pekeris and Munk waveguide environments. Compared with the Pekeris scenario, the Munk scenario has a more regular ray propagation path and ray arrival structure. Therefore, the paper only presents the result of the ray propagation path and the ray arrival structure in the Munk scenario. The specific environmental parameters and acoustic configuration are detailed in Table~\ref{table:BM Cases}:
+
+
+\begin{enumerate}
+    \item \textbf{Ray Propagation Paths}    
+        
+        To verify the reciprocity of different ray tracing methods, the sound ray diagrams before and after reciprocity in Munk scenario are analyzed. From Figs.~\ref{fig:oob_reciprocity_rays}(a) and \ref{fig:oob_reciprocity_rays}(b), it can be intuitively observed that the sound ray trajectories are completely symmetric before and after reciprocity, which indicates that the sound rays between transmission and reception satisfy reversibility. This result directly validates that  the precise eigenray calculation method meets the reciprocity principle at the sound ray level, laying a solid foundation for the subsequent accurate calculation of the sound fields. From Figs.~\ref{fig:oob_reciprocity_rays}(c) and \ref{fig:oob_reciprocity_rays}(d), Bellhop exhibits incomplete eigenray convergence at the receiver position, with correspondingly poor reciprocity.
+
+    \item \textbf{Ray Arrival Structural}    
+        
+        To further validate the reciprocity of different ray tracing methods, the arrival structures in Munk scenario before and after reciprocity were compared, and the results are presented in Fig.~\ref{fig:oob_reciprocity_arrivals}. From Figs.~\ref{fig:oob_reciprocity_arrivals}(a) and \ref{fig:oob_reciprocity_arrivals}(b), the arrival structures before reciprocity and after reciprocity are basically consistent. This consistency directly verifies that the precise eigenray calculation method satisfies the reciprocity principle at the arrival structure level. In contrast, when using Bellhop, there are obvious differences between the arrival structures before reciprocity (Fig.~\ref{fig:oob_reciprocity_arrivals}(c)) and after reciprocity (Fig.~\ref{fig:oob_reciprocity_arrivals}(d)), indicating poor reciprocity of the equal-angle eigenray calculation method.
+        
+    \item \textbf{Transmission Loss} 
+        
+        Next proceed to verify the reciprocity of transmission loss among different methods. Since both of Pekeris and Munk are horizontally invariant waveguide environments, the point to point sound pressure reciprocity can be extended to the point to line sound pressure reciprocity. For the Pekeris and Munk scenarios, the depths of the source and receiver are exchanged, respectively, and then the TL results before and after reciprocity are calculated. The RMSE is used to quantify the TL error between before and after reciprocity, and the formula is as shown in Eq.~(\ref{eq:tl_rmse2}):
+        \begin{equation}
+        \label{eq:tl_rmse2}
+        RMSE = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \left( TL_{\text{+},i} - TL_{\text{-},i} \right)^2}
+        \end{equation}
+        where $TL_{\text{+},i}$ represents the TL value before reciprocity at the $i$-th receiver; and $TL_{\text{-},i}$ denotes the TL value after reciprocity at the $i$-th receiver. 
+        
+        The results of different methods are shown in Fig.~\ref{fig:oob_reciprocity_tl}. Among them, the symbols + and −, represent the TL before and after reciprocity, respectively. In both the Pekeris and Munk scenarios, the TL results computed by OOB program before and after reciprocity exhibit excellent consistency, with RMSE values below 1.38 dB and as low as 0.03 dB, thereby confirming that the precise eigenray calculation method preserves acoustic reciprocity under near-boundary conditions. In contrast, the TL results obtained by Bellhop before and after reciprocity show significant discrepancies in the same scene, with RMSE values exceeding 4.9 dB and reaching up to 14.03 dB. Moreover, the Bellhop results after reciprocity generally align with those from OOB, whereas the results before reciprocity exhibit considerably larger deviations. This inconsistency arises because, before the reciprocity, compared to after the reciprocity, the receiver is closer to the sea-surface boundary, thereby inducing significant computational errors in the conventional equal-angle eigenray calculation method. The impact of receiver depth on the computational accuracy of the ray-based approach is further analyzed in the following section.
+        
+\end{enumerate}
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Before reciprocity, ray trajectories by OOB]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1PR_ray_cpp_v2.pdf}}
+\subfloat[After reciprocity, ray trajectories by OOB]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1IR_ray_cpp_v2.pdf}}\\ % 第一行换行
+\subfloat[Before reciprocity, ray trajectories by Bellhop]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1PR_ray_ftr_v2.pdf}}
+\subfloat[After reciprocity, ray trajectories by Bellhop]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1IR_ray_ftr_v2.pdf}}
+\caption{The sound ray diagrams before and after reciprocity, comparing OOB (Precise Eigenray Calculation Method) and Bellhop (Equal-Angle Eigenray Calculation Method).}
+\label{fig:oob_reciprocity_rays}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Before reciprocity, arrival structures by OOB]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1PA_arr_cpp.pdf}}
+\subfloat[After reciprocity, arrival structures by OOB]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1IA_arr_cpp.pdf}}\\ 
+\subfloat[Before reciprocity, arrival structures by Bellhop]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1PA_arr_ftr.pdf}}
+\subfloat[After reciprocity, arrival structures by Bellhop]{\includegraphics[width=0.45\linewidth]{MunkB_Coh_1IA_arr_ftr.pdf}}
+\caption{Arrival structures before and after reciprocity, comparing OOB (the Precise Eigenray Calculation Method) and Bellhop (Equal-Angle Eigenray Calculation Method).}
+\label{fig:oob_reciprocity_arrivals}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Pekeris environment, TL results of the OOB and Bellhop before and after reciprocity]{\includegraphics[width=0.45\linewidth]{Reciprocity_TL_pekeris.pdf}}~
+\subfloat[Munk environment, TL results of the OOB and Bellhop before and after reciprocity]{\includegraphics[width=0.45\linewidth]{Reciprocity_TL_Munk.pdf}}\\ % 第一行换行
+\caption{TL before and after reciprocity (the symbols + and - , respectively), comparing OOB (Precise Eigenray Calculation Method) and Bellhop (Equal-Angle Eigenray Calculation Method).}
+\label{fig:oob_reciprocity_tl}
+\end{figure*}
+
+
+
+\subsection{\label{sec:level2}Boundary Analysis}
+
+To further characterize the advantageous scenarios of the precise eigenray method, this section examines, through boundary analysis, two principal factors governing the calculation accuracy of the conventional equal-angle method: receiver depth and initial number of beams. Isolating these two factors precisely identify the critical receiver depth ranges and the initial number of beams required for which algorithm optimization is necessary, establishing a basis for subsequent refinement of the conventional method.
+
+To systematically identify critical receiver depth intervals where significant deviations occur and requisite number of beams, a traversal test is conducted across potential receiver depths and a certain number of beams. As established in the Calculation Accuracy Analysis section, the normal mode method serves as the reference solution. For each combination of receiver depth and number of beams, the TL errors for Bellhop and OOB relative to Kraken are quantified via RMSE; parameter combinations yielding errors exceeding 3 dB are identified through statistical analysis. For the calculation of the OOB method, $N_b$ denotes the number of beams for coarse tracing. The results of the boundary analysis are shown in Fig.~\ref{fig:Boundary Test}.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Pekeris environment, TL RMSE for Bellhop and OOB relative to Kraken]{\includegraphics[width=0.45\linewidth]{BoundaryPekeris.pdf}}
+\subfloat[Munk environment, TL RMSE for Bellhop and OOB relative to Kraken]{\includegraphics[width=0.45\linewidth]{BoundaryMunk.pdf}}\\ % 第一行换行
+\caption{Comparison of the variation of TL RMSE with receiver depth under different numbers of beams}
+\label{fig:Boundary Test}
+\end{figure*}
+
+As illustrated in Fig.~\ref{fig:Boundary Test}, Bellhop's RMSE decreases with increasing number of beams and receiver depth, while OOB's RMSE exhibits limited variation and remains consistently low. For the conventional equal-angle calculation method, accuracy improves with increasing number of beams, as Eq.~(\ref{eq:helmholtz_f}) indicates that larger values reduce $N_b$ and enhance numerical accuracy. Increased receiver depth reduces the probability that the two rays with adjacent take-off angles have different ray histories, thereby enhancing sound field interpolation accuracy at the receiver and overall method performance. For the precise eigenray calculation method, high accuracy under near-boundary conditions is ensured provided that sufficient coarse ray tracing accuracy is maintained through adequate initial number of beams. In particular, at sufficiently large number of beams, Bellhop and OOB results converge. Since the effects of the number of beams on computational cost are analyzed subsequently in the following section, a representative number of beams of $N_b = 1 k$ is employed for boundary analysis with respect to receiver depth. As shown in Fig.~\ref{fig:Boundary Test}, with $N_b = 1 k$, Bellhop achieves RMSE below 3 dB only for receiver depths exceeding 13 m in the Pekeris scenario and 27 m in the Munk scenario. In contrast, OOB maintains RMSE below 3 dB across all receiver depths examined in both scenarios.
+
+
+\subsection{\label{sec:level2}Computational Complexity Analysis}
+
+The difference in computational load between traditional equal-angle ray tracing and precise eigenray calculation arises from ray tracing counts. Defining the time complexity of a single ray tracing operation as $\Theta(1)$, the equal-angle calculation has linear time complexity with number of beams $n_b$:    
+\begin{equation}
+\label{eq:f_etheta}
+f_{e}=\Theta(n_b),
+\end{equation}  
+where $n_b = \pi/d\alpha$ ( $d\alpha$ = initial angle interval in radians).  
+
+Precise eigenray calculation includes coarse tracing (fixed $n_1$ rays, $\Theta(n_1)$ complexity) and fine tracing (binary search for $N_e$ eigenrays, $N_e\Theta(\log_2(n/n_1))$ complexity). Total complexity simplifies to:  
+\begin{equation}
+\label{eq:f_PTheta}
+f_{p}=\Theta\left(\log_2 n\right),
+\end{equation}  
+as $n_1$ and $N_e$ (determined by geometry/environment) are constant.  
+
+In short, the precise eigenray calculation has logarithmic time complexity $\Theta(\log_2 n)$, versus linear $\Theta(n)$ for the traditional equal-angle calculation, drastically reducing the computational cost of the former.
+
+It is worth noting that the above derivation is based on the single-receiver scenario. When the number of receivers $N_{\text{Rcvr}}$ is greater than 1, the traditional equal-angle ray method does not need to resolve the eigenrays, and its time complexity remains $\Theta(n)$; in contrast, the time complexity of the accurate calculation of eigenrays is $N_{\text{Rcvr}}\Theta(\log_2 n)$.
+
+To quantify the efficiency gain of this method, this study statistically analyzes the runtime of the traditional Bellhop program and the OOB program under different values of angle interval $d\alpha$. For the OOB program, $d\alpha$ characterizes the solution accuracy of the fine tracing eigenrays. Meanwhile, it explores the variation law of propagation loss calculation results with $d\alpha$. The tests are carried out based on the single-source single-receiver scenario (Pekeris/Munk waveguide environments), where the receiver depth and reception range are set to 1 m and 30 km respectively in the Pekeris waveguide environment, and 10 m and 30 km respectively in the Munk waveguide environment. Based on the results presented in Fig.~\ref{fig:Boundary Test}, the number of coarse tracing beams for the OOB program is set to 1000.
+
+Figs.~\ref{fig:TL_Curve_and_Runtime_Tests}(a), \ref{fig:TL_Curve_and_Runtime_Tests}(b) and \ref{fig:TL_Curve_and_Runtime_Tests}(c), \ref{fig:TL_Curve_and_Runtime_Tests}(d) present the  transmission loss and computational time characteristics of the two programs, respectively.
+
+In terms of propagation loss, the results calculated by the OOB program show good consistency with the improvement of calculation accuracy $d\alpha$; the results of the traditional Bellhop program gradually converge to those of the OOB program as $d\alpha$ decreases, which verifies the reliability of the relevant calculation results.
+
+In terms of computational time, accuracy is characterized by $d\alpha$, where a smaller $d\alpha$ indicates higher accuracy. The traditional Bellhop program has low computational time when $d\alpha$ is large (low accuracy), but its time increases linearly as $d\alpha$ decreases (accuracy improves). In particular, when the $d\alpha$ accuracy is less than 0.01°, the computational time of the traditional Bellhop program under the single-receiver condition has far exceeded that of the OOB program. In contrast, the OOB program’s time remains stably in a low range, with a relatively gentle growth rate.
+
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=1\linewidth]{TL_Curve_and_Runtime.pdf}
+    \caption{Variation of TL curve and computation time with discrete angle ($d\alpha$) and number of beams (NBeams) under different environmentals (a) Pekeris environment: TL curve (b) Munk environment: TL curve (c) Pekeris environment: Computation Time (d) Munk environment: Computation Time}
+    \label{fig:TL_Curve_and_Runtime_Tests}
+\end{figure*}
+
+
+\section{Conclusion}
+This paper addresses a fundamental limitation of classical ray tracing: the violation of acoustic reciprocity and significant accuracy degradation that occur when sources or receivers are located near ocean boundaries. By reformulating eigenray determination as a root-finding problem and introducing ray-characteristic bisection, we propose a precise eigenray calculation method that systematically overcomes the "missed detection" errors inherent in conventional equal-angle techniques.
+
+The proposed algorithm features a dual-step architecture: (1) coarse tracing identifies solution intervals by detecting both sign changes of the target function $F(\alpha)$ and minima of the error function $|F(\alpha)|$, and (2) fine tracing applies ray characteristic and symbolic bisection. Moreover, rapid convergence of the solution is achieved with the dynamic convergence criterion. This algorithm addresses the issue of large eigenray calculation errors in the traditional equal-angle method under near-boundary conditions.
+
+Extensive numerical validation using canonical Pekeris and Munk waveguides demonstrates the method's superiority across four critical performance metrics:
+
+\begin{enumerate}
+    \item Accuracy: Transmission loss computations yield errors below 1.88 dB when compared to Kraken normal mode solutions, whereas Bellhop’s equal-angle method produces errors up to 14.03 dB for near-surface receivers.
+    \item Reciprocity: The method preserves reciprocity at all three levels—ray trajectories, arrival structures, and transmission loss—with discrepancies as low as 0.03 dB. In contrast, conventional methods fail to maintain reciprocity, exhibiting discrepancies exceeding 4.9 dB.
+    \item Boundary: The proposed approach maintains accuracy within 3 dB even for arbitrarily shallow receiver depths, while Bellhop requires minimum receiver depths of 13 m (Pekeris scenario) or 27 m (Munk scenario) when employing 1000 beams.
+    \item Computational Complexity: Although coarse equal-angle tracing is faster under low-accuracy settings, the proposed method exhibits stable scaling with increasing precision demands. Its runtime becomes independent of angle discretization fineness, making it increasingly advantageous for high-resolution simulations.
+\end{enumerate}
+
+The precise eigen-ray calculation method not only retains the advantages of intuitive physical interpretation and high computational efficiency inherent in ray acoustics, but also overcomes its theoretical defects near boundaries, thereby providing a feasible solution for eigenray-based acoustic field prediction techniques. This method may provide valuable support for underwater acoustic engineering applications such as reciprocity-based ambient noise modeling and efficient reverberation prediction. Future research will further extend this framework to three-dimensional and range-dependent underwater acoustic environments.
+
+\begin{acknowledgments}
+This research was funded by the National Natural Science Foundation of China, grant number 12474446; and by the Guangdong Basic and Applied Basic Research Foundation, grant number 2024A1515030149, National Natural Science Foundation of China (Grant Nos. U22A2012 and 12174418).
+
+Gratitude is extended to Yinglin Chen, Qitian Zeng, Yiyang Lu, Jiahua Hu, Zhengchao Huang for the enlightening discussions and inspiring suggestions on the formulation of the proposed method.
+\end{acknowledgments}
+
+\section*{AUTHOR DECLARATIONS}
+
+Conflict of Interest
+No potential conflict of interest was reported by the authors.
+
+\section*{Data Availability Statement}
+
+Data sharing is not applicable to this article as no new data were created or analyzed in this study.
+
+\nocite{*}
+\bibliography{aipsamp}% Produces the bibliography via BibTeX.
+
+\end{document}
+%
+% ****** End of file aipsamp.tex ******
