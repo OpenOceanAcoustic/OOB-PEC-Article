@@ -64,6 +64,26 @@ TL22_flat = -10 * log10(I22_smooth);
 TL22_flat = smooth(TL22_flat);
 RMSE2 = sqrt(mean((TL2_flat - TL22_flat).^2));
 
+% bellhop PekerisBPCC;
+% bellhop PekerisBICC;
+% [ PlotTitle, PlotType, freqVec, freq0, atten, Pos, pressure3 ] = read_shd('PekerisBPCC.shd' );
+% 
+% pres3_abs = removedata(pressure3);
+% I3 = pres3_abs .^2;
+% I3_smooth = smooth(I3, 11);
+% TL3_flat = -10 * log10(I3_smooth);
+% TL3_flat = smooth(TL3_flat);
+% RMSE13 = sqrt(mean((TL1_flat(10:end) - TL3_flat(10:end)).^2));
+% 
+% [ PlotTitle, PlotType, freqVec, freq0, atten, Pos, pressure33 ] = read_shd('PekerisBICC.shd' );
+% 
+% pres33_abs = removedata(pressure33);
+% I33 = pres33_abs .^2;
+% I33_smooth = smooth(I33, 11);
+% TL33_flat = -10 * log10(I33_smooth);
+% TL33_flat = smooth(TL33_flat);
+% RMSE3 = sqrt(mean((TL3_flat(10:end) - TL33_flat(10:end)).^2));
+
 
 figure;
 hold on;
@@ -72,6 +92,8 @@ plot(Pos.r.r/1e3, TL1_flat, 'b--', LineWidth=1.5, DisplayName='OOB+');
 plot(Pos.r.r/1e3, TL11_flat, 'b:', LineWidth=1.5, DisplayName='OOB-');
 plot(Pos.r.r/1e3, TL2_flat, 'r--', LineWidth=1.5, DisplayName='Bellhop+');
 plot(Pos.r.r/1e3, TL22_flat, 'r:', LineWidth=1.5, DisplayName='Bellhop-');
+% plot(Pos.r.r/1e3, TL3_flat, 'g--', LineWidth=1.5, DisplayName='Bellhop C+');
+% plot(Pos.r.r/1e3, TL33_flat, 'g:', LineWidth=1.5, DisplayName='Bellhop C-');
 
 legend();
 set(gca, 'FontName', 'Times new roman');
@@ -80,6 +102,10 @@ xlabel('Range (km)');
 ylabel('TL (dB)');
 title(filename, ['RMSE(OOB): ', num2str(RMSE1, '%.2f') ,' dB' ,...
     '      ', 'RMSE(Bellhop): ', num2str(RMSE2, '%.2f')]);
+% title(filename, ['RMSE(OOB): ', num2str(RMSE1, '%.2f') ,' dB' ,...
+%     '      ', 'RMSE(Bellhop): ', num2str(RMSE2, '%.2f') ,' dB' ,...
+%     '      ', 'RMSE(Bellhop C): ', num2str(RMSE3, '%.2f'), ' dB']);
+% ylim([55 115])
 
 saveas(gcf, sprintf('../figs/Reciprocity_TL_%s.fig', filename));
 
