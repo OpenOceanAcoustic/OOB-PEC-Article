@@ -9,14 +9,14 @@ timeOOB = zeros(length(NBeamsvec),1);
 TLBellhop = zeros(length(NBeamsvec),1);
 TLOOB = zeros(length(NBeamsvec),1);
 
-% filename = 'Pekeris';
-filename = 'Munk';
-filepathBellhop = [filename 'BIP1'];
-filepathOOB = [filename 'BIP2'];
+filename = 'Pekeris';
+% filename = 'Munk';
+filepathBellhop = [filename 'BP'];
+filepathOOB = [filename 'BPC'];
 
-% 从../envs中拷贝env文件
-copyfile(['../envs/' filepathBellhop '.env'], [filepathBellhop '.env']);
-copyfile(['../envs/' filepathOOB '.env'], [filepathOOB '.env']);
+% 从../envs/6_ComputationalComplexityAnalysis中拷贝env文件
+copyfile(['../envs/6_ComputationalComplexityAnalysis/' filepathBellhop '.env'], [filepathBellhop '.env']);
+copyfile(['../envs/6_ComputationalComplexityAnalysis/' filepathOOB '.env'], [filepathOOB '.env']);
 
 % 计算模块
 for ib = 1:length(NBeamsvec)
@@ -31,7 +31,7 @@ for ib = 1:length(NBeamsvec)
     timeBellhop(ib) = time1;
 
     % 定义文件路径
-    fun_RewriteOOB([filepathOOB '.env'], dalpha);
+    fun_RewriteOOB_dalpha([filepathOOB '.env'], dalpha);
 
     tic;
     oob(filepathOOB);

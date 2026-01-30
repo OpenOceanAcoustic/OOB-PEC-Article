@@ -4,20 +4,20 @@ clc; clear all; close all;
 % 初始化参数
 
 
-NBeamsvec = [500 1000] %5000 10000 50000];
+NBeamsvec = [500 1000]% 5000 10000 50000];
 filename = 'Pekeris';
 % filename = 'Munk';
 intersect_y = 3; % RMSE容限
 intersect_xvec = zeros(size(NBeamsvec));
 
 % 拷贝环境文件
-filenameK = sprintf('%sK_BA2', filename);
-filenameB = sprintf('%sBIP_BA2', filename);
-filenameO = sprintf('%sBPC_BA2', filename);
-copyfile(sprintf('../envs/%s.env', filenameK), './');
-copyfile(sprintf('../envs/%s.flp', filenameK), './');
-copyfile(sprintf('../envs/%s.env', filenameB), './');
-copyfile(sprintf('../envs/%s.env', filenameO), './');
+filenameK = sprintf('%sK', filename);
+filenameB = sprintf('%sBP', filename);
+filenameO = sprintf('%sBPC', filename);
+copyfile(sprintf('../envs/5_BoundaryAnalysis/%s.env', filenameK), './');
+copyfile(sprintf('../envs/5_BoundaryAnalysis/%s.flp', filenameK), './');
+copyfile(sprintf('../envs/5_BoundaryAnalysis/%s.env', filenameB), './');
+copyfile(sprintf('../envs/5_BoundaryAnalysis/%s.env', filenameO), './');
 
 
 kraken(filenameK);

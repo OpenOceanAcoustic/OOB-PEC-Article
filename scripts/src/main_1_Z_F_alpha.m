@@ -112,8 +112,8 @@ set(gca, 'fontsize', 16)
 % saveas(gcf, '../figs/F-Alpha-Bc200m-Bc-200m.png')
 
 %% Munk场景
-filename = 'MunkB_ray_test_Falpha2';
-copyfile(sprintf('../envs/%s.env', filename), './');
+filename = 'MunkB_ray_test_Falpha';
+copyfile(sprintf('../envs/1_Z_F_alpha/%s.env', filename), './');
 eval(sprintf('! bellhop2D_Falpha.exe %s', filename));
 
 % Faplha

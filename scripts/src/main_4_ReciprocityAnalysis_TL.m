@@ -1,17 +1,17 @@
 clc; clear; close all;
 %% Reciprocity Analysis 互易性测试，将声源深度和接收深度互换，计算距离上的传播损失，对比bellhop和oob的结果
-% filename = 'Pekeris';
-filename = 'Munk';
+filename = 'Pekeris';
+% filename = 'Munk';
 
 % 拷贝环境文件
-filenameBP = sprintf('%sBP1D', filename);
-filenameBI = sprintf('%sBI1D', filename);
-filenamePCP = sprintf('%sBPCP1D', filename);
-filenamePCI = sprintf('%sBPCI1D', filename);
-copyfile(['../envs/' filenameBP '.env'], [filenameBP '.env']);
-copyfile(['../envs/' filenameBI '.env'], [filenameBI '.env']);
-copyfile(['../envs/' filenamePCP '.env'], [filenamePCP '.env']);
-copyfile(['../envs/' filenamePCI '.env'], [filenamePCI '.env']);
+filenameBP = sprintf('%sBP', filename);
+filenameBI = sprintf('%sBI', filename);
+filenamePCP = sprintf('%sBPCP', filename);
+filenamePCI = sprintf('%sBPCI', filename);
+copyfile(['../envs/4_ReciprocityAnalysis_TL/' filenameBP '.env'], [filenameBP '.env']);
+copyfile(['../envs/4_ReciprocityAnalysis_TL/' filenameBI '.env'], [filenameBI '.env']);
+copyfile(['../envs/4_ReciprocityAnalysis_TL/' filenamePCP '.env'], [filenamePCP '.env']);
+copyfile(['../envs/4_ReciprocityAnalysis_TL/' filenamePCI '.env'], [filenamePCI '.env']);
 
 % kraken MunkK_D;
 % bellhop MunkB_ray_D;
@@ -78,10 +78,10 @@ set(gca, 'FontName', 'Times new roman');
 axis ij;
 xlabel('Range (km)');
 ylabel('TL (dB)');
-title('Munk', ['RMSE(OOB): ', num2str(RMSE1, '%.2f') ,' dB' ,...
+title(filename, ['RMSE(OOB): ', num2str(RMSE1, '%.2f') ,' dB' ,...
     '      ', 'RMSE(Bellhop): ', num2str(RMSE2, '%.2f')]);
 
-saveas(gcf, sprintf('Reciprocity_TL_%s.fig', filename));
+saveas(gcf, sprintf('../figs/Reciprocity_TL_%s.fig', filename));
 
 %% 删除env和计算结果文件
 delete(sprintf('./%s*', filenameBP));

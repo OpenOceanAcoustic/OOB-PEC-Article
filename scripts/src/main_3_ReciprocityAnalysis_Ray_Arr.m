@@ -3,7 +3,7 @@ clc; close all; clear all;
 % 复制文件到当前目录
 filename = 'MunkB_Coh_1';
 
-copyfile(sprintf('../envs/%s*', filename), './');
+copyfile(sprintf('../envs/3_ReciprocityAnalysis_Ray_Arr/%s*', filename), './');
 filenamePR = sprintf('%sPR.env', filename);
 filenameIR = sprintf('%sIR.env', filename);
 filenamePA = sprintf('%sPA.env', filename);

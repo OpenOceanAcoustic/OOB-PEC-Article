@@ -2,9 +2,9 @@ clc; close all;
 % 以KRAKEN作为标准解，对比Bellhop和OOB计算的传播损失误差
 
 %% 拷贝环境文件
-% filename = 'Munk';
-filename = 'Pekeris';
-copyfile(sprintf('../envs/%s*', filename), './');
+filename = 'Munk';
+% filename = 'Pekeris';
+copyfile(sprintf('../envs/2_CalculationAccuracyAnalysis/%s*', filename), './');
 
 %% KRAKEN 简正波方法
 filenameK = [filename 'K'];
@@ -22,7 +22,7 @@ TL1 = -20*log10(abs(I1_smooth));
 
 
 %% Bellhop 等角度解
-filenameB = [filename 'BIP.env'];
+filenameB = [filename 'BP.env'];
 oob(filenameB);
 figure;
 plotshd([filenameB(1:end-4) '_P.shd'])
